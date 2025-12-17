@@ -1,6 +1,6 @@
 # Leash 🔒
 
-**Security guardrails for AI coding agents.** Sandboxes file system access, blocks dangerous commands (rm, mv, chmod) outside project directory, prevents command injection attacks.
+**Security guardrails for AI coding agents.** Sandboxes file system access, blocks dangerous commands outside project directory, catches agent hallucinations before they cause damage.
 
 ## Why Leash?
 
