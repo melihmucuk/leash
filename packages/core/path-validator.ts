@@ -1,6 +1,7 @@
 import { resolve, relative } from "path";
 import { homedir } from "os";
-import { realpathSync, lstatSync } from "fs";
+import { realpathSync } from "fs";
+import { SAFE_WRITE_PATHS, TEMP_PATHS } from "./constants.js";
 
 export class PathValidator {
   constructor(private workingDirectory: string) {}
@@ -16,24 +17,19 @@ export class PathValidator {
       });
   }
 
-  /** Resolve path following symlinks */
+  /** Resolve path following all symlinks (including parent directories) */
   private resolveReal(path: string): string {
     const expanded = this.expand(path);
     const resolved = resolve(this.workingDirectory, expanded);
 
     try {
-      const stats = lstatSync(resolved);
-      if (stats.isSymbolicLink()) {
-        return realpathSync(resolved);
-      }
+      return realpathSync(resolved);
     } catch {
       // Path doesn't exist yet, use resolved path
+      return resolved;
     }
-
-    return resolved;
   }
 
-  /** Check if path is within working directory */
   isWithinWorkingDir(path: string): boolean {
     try {
       const realPath = this.resolveReal(path);
@@ -48,5 +44,19 @@ export class PathValidator {
     } catch {
       return false;
     }
+  }
+
+  private matchesAny(resolved: string, paths: string[]): boolean {
+    return paths.some((p) => resolved === p || resolved.startsWith(p + "/"));
+  }
+
+  isSafeForWrite(path: string): boolean {
+    const resolved = this.resolveReal(path);
+    return this.matchesAny(resolved, SAFE_WRITE_PATHS);
+  }
+
+  isTempPath(path: string): boolean {
+    const resolved = this.resolveReal(path);
+    return this.matchesAny(resolved, TEMP_PATHS);
   }
 }

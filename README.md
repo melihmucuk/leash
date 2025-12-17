@@ -103,7 +103,7 @@ cd ~/leash && git pull
 
 ## Features
 
-- **Path Sandboxing** — Restricts all file operations to the working directory
+- **Path Sandboxing** — Restricts file operations to working directory, `/tmp`, and `/var/tmp`
 - **Dangerous Command Blocking** — Intercepts `rm`, `mv`, `cp`, `chmod`, `chown`, `dd`, and more
 - **Symlink Resolution** — Prevents symlink-based escapes to external directories
 - **Command Chain Analysis** — Parses `&&`, `||`, `;`, `|` chains for hidden threats
@@ -158,6 +158,10 @@ echo $(rm -rf ~)
 rm -rf ./node_modules
 mv ./old.ts ./new.ts
 cp ./template.json ./config.json
+
+# ✅ Allowed: Temp directory operations
+echo "cache" > /tmp/build-cache.txt
+rm -rf /tmp/my-app-cache
 ```
 
 ## Limitations

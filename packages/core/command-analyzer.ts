@@ -1,10 +1,6 @@
 import { basename } from "path";
 import { PathValidator } from "./path-validator.js";
-import {
-  DANGEROUS_COMMANDS,
-  REDIRECT_PATTERN,
-  SAFE_DEVICE_PATHS,
-} from "./constants.js";
+import { DANGEROUS_COMMANDS, REDIRECT_PATTERN } from "./constants.js";
 
 export interface AnalysisResult {
   blocked: boolean;
@@ -111,7 +107,6 @@ export class CommandAnalyzer {
     return commands;
   }
 
-  /** Check for redirects to external paths */
   private checkRedirects(command: string): AnalysisResult {
     const matches = command.matchAll(REDIRECT_PATTERN);
 
@@ -119,7 +114,7 @@ export class CommandAnalyzer {
       const path = match[1];
       if (
         path &&
-        !SAFE_DEVICE_PATHS.has(path) &&
+        !this.pathValidator.isSafeForWrite(path) &&
         !this.pathValidator.isWithinWorkingDir(path)
       ) {
         return {
@@ -132,6 +127,14 @@ export class CommandAnalyzer {
     return { blocked: false };
   }
 
+  /** Check if path is allowed for the operation */
+  private isPathAllowed(path: string, allowDevicePaths: boolean): boolean {
+    if (this.pathValidator.isWithinWorkingDir(path)) return true;
+    return allowDevicePaths
+      ? this.pathValidator.isSafeForWrite(path)
+      : this.pathValidator.isTempPath(path);
+  }
+
   /** Check dangerous commands for external paths */
   private checkDangerousCommand(command: string): AnalysisResult {
     const baseCmd = this.getBaseCommand(command);
@@ -142,8 +145,23 @@ export class CommandAnalyzer {
 
     const paths = this.extractPaths(command);
 
+    // cp: only check destination (last path), source is just read
+    if (baseCmd === "cp" && paths.length > 0) {
+      const dest = paths[paths.length - 1];
+      if (!this.isPathAllowed(dest, true)) {
+        return {
+          blocked: true,
+          reason: `Command "${baseCmd}" targets path outside working directory: ${dest}`,
+        };
+      }
+      return { blocked: false };
+    }
+
+    // Write commands: allow device paths (e.g., truncate /dev/null)
+    const isWriteCommand = baseCmd === "truncate" || baseCmd === "dd";
+
     for (const path of paths) {
-      if (!this.pathValidator.isWithinWorkingDir(path)) {
+      if (!this.isPathAllowed(path, isWriteCommand)) {
         return {
           blocked: true,
           reason: `Command "${baseCmd}" targets path outside working directory: ${path}`,
@@ -174,11 +192,13 @@ export class CommandAnalyzer {
     return { blocked: false };
   }
 
-  /** Validate a file path for write/edit operations */
   validatePath(path: string): AnalysisResult {
     if (!path) return { blocked: false };
 
-    if (!this.pathValidator.isWithinWorkingDir(path)) {
+    if (
+      !this.pathValidator.isSafeForWrite(path) &&
+      !this.pathValidator.isWithinWorkingDir(path)
+    ) {
       return {
         blocked: true,
         reason: `File operation targets path outside working directory: ${path}`,

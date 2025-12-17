@@ -4,7 +4,34 @@ import { basename } from "path";
 // packages/core/path-validator.ts
 import { resolve, relative } from "path";
 import { homedir } from "os";
-import { realpathSync, lstatSync } from "fs";
+import { realpathSync } from "fs";
+
+// packages/core/constants.ts
+var DANGEROUS_COMMANDS = /* @__PURE__ */ new Set([
+  "rm",
+  "rmdir",
+  "unlink",
+  "shred",
+  "mv",
+  "cp",
+  "chmod",
+  "chown",
+  "chgrp",
+  "truncate",
+  "dd",
+  "ln"
+]);
+var REDIRECT_PATTERN = />\s*([~\/][^\s;|&>]*)/g;
+var DEVICE_PATHS = ["/dev/null", "/dev/stdin", "/dev/stdout", "/dev/stderr"];
+var TEMP_PATHS = [
+  "/tmp",
+  "/var/tmp",
+  "/private/tmp",
+  "/private/var/tmp"
+];
+var SAFE_WRITE_PATHS = [...DEVICE_PATHS, ...TEMP_PATHS];
+
+// packages/core/path-validator.ts
 var PathValidator = class {
   constructor(workingDirectory) {
     this.workingDirectory = workingDirectory;
@@ -17,20 +44,16 @@ var PathValidator = class {
       return process.env[name] || "";
     });
   }
-  /** Resolve path following symlinks */
+  /** Resolve path following all symlinks (including parent directories) */
   resolveReal(path) {
     const expanded = this.expand(path);
     const resolved = resolve(this.workingDirectory, expanded);
     try {
-      const stats = lstatSync(resolved);
-      if (stats.isSymbolicLink()) {
-        return realpathSync(resolved);
-      }
+      return realpathSync(resolved);
     } catch {
+      return resolved;
     }
-    return resolved;
   }
-  /** Check if path is within working directory */
   isWithinWorkingDir(path) {
     try {
       const realPath = this.resolveReal(path);
@@ -44,35 +67,18 @@ var PathValidator = class {
       return false;
     }
   }
+  matchesAny(resolved, paths) {
+    return paths.some((p) => resolved === p || resolved.startsWith(p + "/"));
+  }
+  isSafeForWrite(path) {
+    const resolved = this.resolveReal(path);
+    return this.matchesAny(resolved, SAFE_WRITE_PATHS);
+  }
+  isTempPath(path) {
+    const resolved = this.resolveReal(path);
+    return this.matchesAny(resolved, TEMP_PATHS);
+  }
 };
-
-// packages/core/constants.ts
-var DANGEROUS_COMMANDS = /* @__PURE__ */ new Set([
-  // Delete
-  "rm",
-  "rmdir",
-  "unlink",
-  "shred",
-  // Move/Copy
-  "mv",
-  "cp",
-  // Permissions
-  "chmod",
-  "chown",
-  "chgrp",
-  // Write
-  "truncate",
-  "dd",
-  // Links
-  "ln"
-]);
-var REDIRECT_PATTERN = />\s*([~\/][^\s;|&>]*)/g;
-var SAFE_DEVICE_PATHS = /* @__PURE__ */ new Set([
-  "/dev/null",
-  "/dev/stdin",
-  "/dev/stdout",
-  "/dev/stderr"
-]);
 
 // packages/core/command-analyzer.ts
 var CommandAnalyzer = class {
@@ -146,12 +152,11 @@ var CommandAnalyzer = class {
     if (current.trim()) commands.push(current.trim());
     return commands;
   }
-  /** Check for redirects to external paths */
   checkRedirects(command) {
     const matches = command.matchAll(REDIRECT_PATTERN);
     for (const match of matches) {
       const path = match[1];
-      if (path && !SAFE_DEVICE_PATHS.has(path) && !this.pathValidator.isWithinWorkingDir(path)) {
+      if (path && !this.pathValidator.isSafeForWrite(path) && !this.pathValidator.isWithinWorkingDir(path)) {
         return {
           blocked: true,
           reason: `Redirect to path outside working directory: ${path}`
@@ -160,6 +165,11 @@ var CommandAnalyzer = class {
     }
     return { blocked: false };
   }
+  /** Check if path is allowed for the operation */
+  isPathAllowed(path, allowDevicePaths) {
+    if (this.pathValidator.isWithinWorkingDir(path)) return true;
+    return allowDevicePaths ? this.pathValidator.isSafeForWrite(path) : this.pathValidator.isTempPath(path);
+  }
   /** Check dangerous commands for external paths */
   checkDangerousCommand(command) {
     const baseCmd = this.getBaseCommand(command);
@@ -167,8 +177,19 @@ var CommandAnalyzer = class {
       return { blocked: false };
     }
     const paths = this.extractPaths(command);
+    if (baseCmd === "cp" && paths.length > 0) {
+      const dest = paths[paths.length - 1];
+      if (!this.isPathAllowed(dest, true)) {
+        return {
+          blocked: true,
+          reason: `Command "${baseCmd}" targets path outside working directory: ${dest}`
+        };
+      }
+      return { blocked: false };
+    }
+    const isWriteCommand = baseCmd === "truncate" || baseCmd === "dd";
     for (const path of paths) {
-      if (!this.pathValidator.isWithinWorkingDir(path)) {
+      if (!this.isPathAllowed(path, isWriteCommand)) {
         return {
           blocked: true,
           reason: `Command "${baseCmd}" targets path outside working directory: ${path}`
@@ -190,10 +211,9 @@ var CommandAnalyzer = class {
     }
     return { blocked: false };
   }
-  /** Validate a file path for write/edit operations */
   validatePath(path) {
     if (!path) return { blocked: false };
-    if (!this.pathValidator.isWithinWorkingDir(path)) {
+    if (!this.pathValidator.isSafeForWrite(path) && !this.pathValidator.isWithinWorkingDir(path)) {
       return {
         blocked: true,
         reason: `File operation targets path outside working directory: ${path}`
