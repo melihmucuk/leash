@@ -14,8 +14,9 @@ export const DANGEROUS_COMMANDS = new Set([
   "ln",
 ]);
 
-/** Pattern to detect redirects to external paths */
-export const REDIRECT_PATTERN = />\s*([~\/][^\s;|&>]*)/g;
+/** Pattern to detect redirects to file paths (quoted or unquoted) */
+export const REDIRECT_PATTERN =
+  />{1,2}\s*(?:"([^"]+)"|'([^']+)'|([^\s;|&>]+))/g;
 
 const DEVICE_PATHS = ["/dev/null", "/dev/stdin", "/dev/stdout", "/dev/stderr"];
 

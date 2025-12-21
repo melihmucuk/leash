@@ -23,7 +23,7 @@ var DANGEROUS_COMMANDS = /* @__PURE__ */ new Set([
   "dd",
   "ln"
 ]);
-var REDIRECT_PATTERN = />\s*([~\/][^\s;|&>]*)/g;
+var REDIRECT_PATTERN = />{1,2}\s*(?:"([^"]+)"|'([^']+)'|([^\s;|&>]+))/g;
 var DEVICE_PATHS = ["/dev/null", "/dev/stdin", "/dev/stdout", "/dev/stderr"];
 var TEMP_PATHS = [
   "/tmp",
@@ -102,10 +102,57 @@ var CommandAnalyzer = class {
     });
     return paths;
   }
-  /** Get the base command name */
+  /** Get base command name, skipping common wrapper commands (sudo/env/command) */
   getBaseCommand(command) {
-    const firstWord = command.trim().split(/\s+/)[0] || "";
-    return basename(firstWord);
+    const tokens = command.trim().split(/\s+/);
+    if (tokens.length === 0) return "";
+    const first = tokens[0];
+    let i = 0;
+    if (first === "sudo" || first === "command") {
+      i++;
+      while (i < tokens.length) {
+        const token = tokens[i];
+        if (token === "--") {
+          i++;
+          break;
+        }
+        if (token.startsWith("-")) {
+          i++;
+          continue;
+        }
+        break;
+      }
+      return basename(tokens[i] || "");
+    }
+    if (first === "env") {
+      const optsWithArgs = /* @__PURE__ */ new Set([
+        "-u",
+        "-C",
+        "-S",
+        "--unset",
+        "--chdir",
+        "--split-string"
+      ]);
+      i++;
+      while (i < tokens.length) {
+        const token = tokens[i];
+        if (token === "--") {
+          i++;
+          break;
+        }
+        if (optsWithArgs.has(token)) {
+          i += 2;
+          continue;
+        }
+        if (token.startsWith("-") || token.includes("=")) {
+          i++;
+          continue;
+        }
+        break;
+      }
+      return basename(tokens[i] || "");
+    }
+    return basename(tokens[0] || "");
   }
   /** Split command by chain operators while respecting quotes */
   splitCommands(command) {
@@ -157,8 +204,11 @@ var CommandAnalyzer = class {
   checkRedirects(command) {
     const matches = command.matchAll(REDIRECT_PATTERN);
     for (const match of matches) {
-      const path = match[1];
-      if (path && !this.pathValidator.isSafeForWrite(path) && !this.pathValidator.isWithinWorkingDir(path)) {
+      const path = match[1] || match[2] || match[3];
+      if (!path || path.startsWith("&")) {
+        continue;
+      }
+      if (!this.pathValidator.isSafeForWrite(path) && !this.pathValidator.isWithinWorkingDir(path)) {
         return {
           blocked: true,
           reason: `Redirect to path outside working directory: ${path}`

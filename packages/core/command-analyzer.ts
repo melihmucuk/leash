@@ -42,10 +42,61 @@ export class CommandAnalyzer {
     return paths;
   }
 
-  /** Get the base command name */
+  /** Get base command name, skipping common wrapper commands (sudo/env/command) */
   private getBaseCommand(command: string): string {
-    const firstWord = command.trim().split(/\s+/)[0] || "";
-    return basename(firstWord);
+    const tokens = command.trim().split(/\s+/);
+    if (tokens.length === 0) return "";
+
+    const first = tokens[0];
+    let i = 0;
+
+    if (first === "sudo" || first === "command") {
+      i++;
+      while (i < tokens.length) {
+        const token = tokens[i];
+        if (token === "--") {
+          i++;
+          break;
+        }
+        if (token.startsWith("-")) {
+          i++;
+          continue;
+        }
+        break;
+      }
+      return basename(tokens[i] || "");
+    }
+
+    if (first === "env") {
+      const optsWithArgs = new Set([
+        "-u",
+        "-C",
+        "-S",
+        "--unset",
+        "--chdir",
+        "--split-string",
+      ]);
+      i++;
+      while (i < tokens.length) {
+        const token = tokens[i];
+        if (token === "--") {
+          i++;
+          break;
+        }
+        if (optsWithArgs.has(token)) {
+          i += 2;
+          continue;
+        }
+        if (token.startsWith("-") || token.includes("=")) {
+          i++;
+          continue;
+        }
+        break;
+      }
+      return basename(tokens[i] || "");
+    }
+
+    return basename(tokens[0] || "");
   }
 
   /** Split command by chain operators while respecting quotes */
@@ -111,9 +162,11 @@ export class CommandAnalyzer {
     const matches = command.matchAll(REDIRECT_PATTERN);
 
     for (const match of matches) {
-      const path = match[1];
+      const path = match[1] || match[2] || match[3];
+      if (!path || path.startsWith("&")) {
+        continue;
+      }
       if (
-        path &&
         !this.pathValidator.isSafeForWrite(path) &&
         !this.pathValidator.isWithinWorkingDir(path)
       ) {
