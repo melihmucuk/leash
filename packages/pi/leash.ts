@@ -4,13 +4,15 @@ import { CommandAnalyzer } from "../core/index.js";
 export default function (pi: HookAPI) {
   let analyzer: CommandAnalyzer | null = null;
 
-  pi.on("session_start", async (_event, ctx) => {
-    analyzer = new CommandAnalyzer(ctx.cwd);
-    ctx.ui.notify("🔒 Leash active", "info");
+  pi.on("session", async (event, ctx) => {
+    if (event.reason === "start") {
+      analyzer = new CommandAnalyzer(ctx.cwd);
+      ctx.ui.notify("🔒 Leash active", "info");
+    }
   });
 
   pi.on("tool_call", async (event, ctx) => {
-    // Initialize analyzer if not already done (fallback)
+    // Fallback if session event was missed
     if (!analyzer) {
       analyzer = new CommandAnalyzer(ctx.cwd);
     }

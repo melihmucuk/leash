@@ -226,9 +226,11 @@ var CommandAnalyzer = class {
 // packages/pi/leash.ts
 function leash_default(pi) {
   let analyzer = null;
-  pi.on("session_start", async (_event, ctx) => {
-    analyzer = new CommandAnalyzer(ctx.cwd);
-    ctx.ui.notify("\u{1F512} Leash active", "info");
+  pi.on("session", async (event, ctx) => {
+    if (event.reason === "start") {
+      analyzer = new CommandAnalyzer(ctx.cwd);
+      ctx.ui.notify("\u{1F512} Leash active", "info");
+    }
   });
   pi.on("tool_call", async (event, ctx) => {
     if (!analyzer) {
