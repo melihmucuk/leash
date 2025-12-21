@@ -29,13 +29,16 @@ export class CommandAnalyzer {
       .filter((t) => !t.startsWith("-"));
 
     tokens.forEach((t) => {
+      // Handle key=value format (e.g., dd of=~/file)
+      const value = t.includes("=") ? t.split("=").slice(1).join("=") : t;
+
       if (
-        t.includes("/") ||
-        t.startsWith("~") ||
-        t.startsWith(".") ||
-        t.startsWith("$")
+        value.includes("/") ||
+        value.startsWith("~") ||
+        value.startsWith(".") ||
+        value.startsWith("$")
       ) {
-        paths.push(t);
+        paths.push(value);
       }
     });
 
@@ -210,8 +213,23 @@ export class CommandAnalyzer {
       return { blocked: false };
     }
 
+    // dd: only check output path (of=), input path (if=) is just read
+    if (baseCmd === "dd") {
+      const ofMatch = command.match(/\bof=["']?([^"'\s]+)["']?/);
+      if (ofMatch) {
+        const outputPath = ofMatch[1];
+        if (!this.isPathAllowed(outputPath, true)) {
+          return {
+            blocked: true,
+            reason: `Command "dd" targets path outside working directory: ${outputPath}`,
+          };
+        }
+      }
+      return { blocked: false };
+    }
+
     // Write commands: allow device paths (e.g., truncate /dev/null)
-    const isWriteCommand = baseCmd === "truncate" || baseCmd === "dd";
+    const isWriteCommand = baseCmd === "truncate";
 
     for (const path of paths) {
       if (!this.isPathAllowed(path, isWriteCommand)) {

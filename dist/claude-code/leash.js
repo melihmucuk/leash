@@ -96,8 +96,9 @@ var CommandAnalyzer = class {
     quoted.forEach((q) => paths.push(q.slice(1, -1)));
     const tokens = command.replace(/["'][^"']*["']/g, "").split(/\s+/).filter((t) => !t.startsWith("-"));
     tokens.forEach((t) => {
-      if (t.includes("/") || t.startsWith("~") || t.startsWith(".") || t.startsWith("$")) {
-        paths.push(t);
+      const value = t.includes("=") ? t.split("=").slice(1).join("=") : t;
+      if (value.includes("/") || value.startsWith("~") || value.startsWith(".") || value.startsWith("$")) {
+        paths.push(value);
       }
     });
     return paths;
@@ -239,7 +240,20 @@ var CommandAnalyzer = class {
       }
       return { blocked: false };
     }
-    const isWriteCommand = baseCmd === "truncate" || baseCmd === "dd";
+    if (baseCmd === "dd") {
+      const ofMatch = command.match(/\bof=["']?([^"'\s]+)["']?/);
+      if (ofMatch) {
+        const outputPath = ofMatch[1];
+        if (!this.isPathAllowed(outputPath, true)) {
+          return {
+            blocked: true,
+            reason: `Command "dd" targets path outside working directory: ${outputPath}`
+          };
+        }
+      }
+      return { blocked: false };
+    }
+    const isWriteCommand = baseCmd === "truncate";
     for (const path of paths) {
       if (!this.isPathAllowed(path, isWriteCommand)) {
         return {

@@ -11,16 +11,18 @@
     "url": "https://github.com/melihmucuk/leash.git"
   },
   "scripts": {
+    "test": "npm run build:core && node --test 'packages/core/test/*.test.js'",
     "typecheck": "tsc --noEmit",
-    "build": "npm run build:opencode && npm run build:pi && npm run build:claude-code && npm run build:factory",
+    "build": "npm run build:core && npm run build:opencode && npm run build:pi && npm run build:claude-code && npm run build:factory",
+    "build:core": "esbuild packages/core/*.ts --outdir=packages/core/lib --platform=node --format=esm",
     "build:opencode": "esbuild packages/opencode/leash.ts --bundle --outfile=dist/opencode/leash.js --platform=node --format=esm --external:@opencode-ai/plugin",
     "build:pi": "esbuild packages/pi/leash.ts --bundle --outfile=dist/pi/leash.js --platform=node --format=esm --external:@mariozechner/pi-coding-agent",
     "build:claude-code": "esbuild packages/claude-code/leash.ts --bundle --outfile=dist/claude-code/leash.js --platform=node --format=esm",
     "build:factory": "esbuild packages/factory/leash.ts --bundle --outfile=dist/factory/leash.js --platform=node --format=esm"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "*",
-    "@opencode-ai/plugin": "^1.0.163",
+    "@mariozechner/pi-coding-agent": "^0.25.3",
+    "@opencode-ai/plugin": "^1.0.184",
     "@types/node": "^22.0.0",
     "esbuild": "^0.27.1",
     "typescript": "^5.0.0"
