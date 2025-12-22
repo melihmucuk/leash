@@ -399,3 +399,39 @@ test("allows git stash pop", () => {
   const result = analyzer.analyze("git stash pop");
   assert.strictEqual(result.blocked, false);
 });
+
+// cd bypass prevention
+test("blocks cd outside working dir followed by rm", () => {
+  const result = analyzer.analyze('cd ~/Downloads && rm -rf folder');
+  assert.strictEqual(result.blocked, true);
+});
+
+test("blocks cd to absolute path followed by rm", () => {
+  const result = analyzer.analyze('cd /Users/someone/Downloads && rm -rf "folder"');
+  assert.strictEqual(result.blocked, true);
+});
+
+test("blocks cd with quoted path followed by rm", () => {
+  const result = analyzer.analyze('cd "/Users/someone/Downloads" && rm -rf folder');
+  assert.strictEqual(result.blocked, true);
+});
+
+test("allows cd inside working dir followed by rm", () => {
+  const result = analyzer.analyze('cd ./subdir && rm -rf temp');
+  assert.strictEqual(result.blocked, false);
+});
+
+test("allows cd to /tmp followed by rm", () => {
+  const result = analyzer.analyze('cd /tmp && rm -rf cache');
+  assert.strictEqual(result.blocked, false);
+});
+
+test("blocks multiple cd hops escaping working dir", () => {
+  const result = analyzer.analyze('cd .. && cd .. && rm -rf target');
+  assert.strictEqual(result.blocked, true);
+});
+
+test("blocks cd home followed by dangerous command", () => {
+  const result = analyzer.analyze('cd && rm -rf Documents');
+  assert.strictEqual(result.blocked, true);
+});

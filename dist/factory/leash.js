@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 // packages/core/command-analyzer.ts
-import { basename } from "path";
+import { basename, resolve as resolve2 } from "path";
+import { homedir as homedir2 } from "os";
 
 // packages/core/path-validator.ts
 import { resolve, relative } from "path";
@@ -107,17 +108,24 @@ var CommandAnalyzer = class {
     this.pathValidator = new PathValidator(workingDirectory);
   }
   pathValidator;
+  resolvePath(path, resolveBase) {
+    const expanded = this.pathValidator.expand(path);
+    return resolveBase ? resolve2(resolveBase, expanded) : expanded;
+  }
+  isPathAllowed(path, allowDevicePaths, resolveBase) {
+    const resolved = this.resolvePath(path, resolveBase);
+    if (this.pathValidator.isWithinWorkingDir(resolved)) return true;
+    return allowDevicePaths ? this.pathValidator.isSafeForWrite(resolved) : this.pathValidator.isTempPath(resolved);
+  }
   extractPaths(command) {
     const paths = [];
     const quoted = command.match(/["']([^"']+)["']/g) || [];
     quoted.forEach((q) => paths.push(q.slice(1, -1)));
     const tokens = command.replace(/["'][^"']*["']/g, "").split(/\s+/).filter((t) => !t.startsWith("-"));
-    tokens.forEach((t) => {
-      const value = t.includes("=") ? t.split("=").slice(1).join("=") : t;
-      if (value.includes("/") || value.startsWith("~") || value.startsWith(".") || value.startsWith("$")) {
-        paths.push(value);
-      }
-    });
+    for (let i = 1; i < tokens.length; i++) {
+      const value = tokens[i].includes("=") ? tokens[i].split("=").slice(1).join("=") : tokens[i];
+      if (value) paths.push(value);
+    }
     return paths;
   }
   getBaseCommand(command) {
@@ -233,9 +241,21 @@ var CommandAnalyzer = class {
     }
     return { blocked: false };
   }
-  isPathAllowed(path, allowDevicePaths) {
-    if (this.pathValidator.isWithinWorkingDir(path)) return true;
-    return allowDevicePaths ? this.pathValidator.isSafeForWrite(path) : this.pathValidator.isTempPath(path);
+  isCdCommand(command) {
+    return this.getBaseCommand(command) === "cd";
+  }
+  extractCdTarget(command) {
+    const trimmed = command.trim();
+    const quotedMatch = trimmed.match(/^cd\s+["']([^"']+)["']/);
+    if (quotedMatch) return quotedMatch[1];
+    const tokens = trimmed.split(/\s+/);
+    if (tokens[0] !== "cd") return null;
+    if (tokens.length === 1) return homedir2();
+    let i = 1;
+    while (i < tokens.length && tokens[i].startsWith("-")) {
+      i++;
+    }
+    return tokens[i] || null;
   }
   checkDangerousGitCommands(command) {
     for (const { pattern, name } of DANGEROUS_GIT_PATTERNS) {
@@ -253,7 +273,7 @@ var CommandAnalyzer = class {
       if (!pattern.test(command)) continue;
       const paths = this.extractPaths(command);
       for (const path of paths) {
-        if (!this.isPathAllowed(path, false)) {
+        if (!this.pathValidator.isWithinWorkingDir(path) && !this.pathValidator.isTempPath(path)) {
           return {
             blocked: true,
             reason: `Command "${name}" targets path outside working directory: ${path}`
@@ -263,7 +283,7 @@ var CommandAnalyzer = class {
     }
     return { blocked: false };
   }
-  checkDangerousCommand(command) {
+  checkDangerousCommand(command, resolveBase) {
     const baseCmd = this.getBaseCommand(command);
     if (!DANGEROUS_COMMANDS.has(baseCmd)) {
       return { blocked: false };
@@ -271,33 +291,39 @@ var CommandAnalyzer = class {
     const paths = this.extractPaths(command);
     if (baseCmd === "cp" && paths.length > 0) {
       const dest = paths[paths.length - 1];
-      if (!this.isPathAllowed(dest, true)) {
+      if (!this.isPathAllowed(dest, true, resolveBase)) {
         return {
           blocked: true,
-          reason: `Command "${baseCmd}" targets path outside working directory: ${dest}`
+          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(
+            dest,
+            resolveBase
+          )}`
         };
       }
       return { blocked: false };
     }
     if (baseCmd === "dd") {
       const ofMatch = command.match(/\bof=["']?([^"'\s]+)["']?/);
-      if (ofMatch) {
-        const outputPath = ofMatch[1];
-        if (!this.isPathAllowed(outputPath, true)) {
-          return {
-            blocked: true,
-            reason: `Command "dd" targets path outside working directory: ${outputPath}`
-          };
-        }
+      if (ofMatch && !this.isPathAllowed(ofMatch[1], true, resolveBase)) {
+        return {
+          blocked: true,
+          reason: `Command "dd" targets path outside working directory: ${this.resolvePath(
+            ofMatch[1],
+            resolveBase
+          )}`
+        };
       }
       return { blocked: false };
     }
-    const isWriteCommand = baseCmd === "truncate";
+    const allowDevicePaths = baseCmd === "truncate";
     for (const path of paths) {
-      if (!this.isPathAllowed(path, isWriteCommand)) {
+      if (!this.isPathAllowed(path, allowDevicePaths, resolveBase)) {
         return {
           blocked: true,
-          reason: `Command "${baseCmd}" targets path outside working directory: ${path}`
+          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(
+            path,
+            resolveBase
+          )}`
         };
       }
     }
@@ -311,10 +337,20 @@ var CommandAnalyzer = class {
     const patternResult = this.checkDangerousPatterns(command);
     if (patternResult.blocked) return patternResult;
     const commands = this.splitCommands(command);
+    let currentWorkDir = this.workingDirectory;
     for (const cmd of commands) {
       const trimmed = cmd.trim();
       if (!trimmed) continue;
-      const result = this.checkDangerousCommand(trimmed);
+      if (this.isCdCommand(trimmed)) {
+        const target = this.extractCdTarget(trimmed);
+        if (target) {
+          const expanded = this.pathValidator.expand(target);
+          currentWorkDir = resolve2(currentWorkDir, expanded);
+        }
+        continue;
+      }
+      const resolveBase = currentWorkDir !== this.workingDirectory ? currentWorkDir : void 0;
+      const result = this.checkDangerousCommand(trimmed, resolveBase);
       if (result.blocked) return result;
     }
     return { blocked: false };

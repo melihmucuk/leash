@@ -1,4 +1,5 @@
-import { basename } from "path";
+import { basename, resolve } from "path";
+import { homedir } from "os";
 import { PathValidator } from "./path-validator.js";
 import {
   DANGEROUS_COMMANDS,
@@ -19,6 +20,23 @@ export class CommandAnalyzer {
     this.pathValidator = new PathValidator(workingDirectory);
   }
 
+  private resolvePath(path: string, resolveBase?: string): string {
+    const expanded = this.pathValidator.expand(path);
+    return resolveBase ? resolve(resolveBase, expanded) : expanded;
+  }
+
+  private isPathAllowed(
+    path: string,
+    allowDevicePaths: boolean,
+    resolveBase?: string
+  ): boolean {
+    const resolved = this.resolvePath(path, resolveBase);
+    if (this.pathValidator.isWithinWorkingDir(resolved)) return true;
+    return allowDevicePaths
+      ? this.pathValidator.isSafeForWrite(resolved)
+      : this.pathValidator.isTempPath(resolved);
+  }
+
   private extractPaths(command: string): string[] {
     const paths: string[] = [];
 
@@ -30,18 +48,12 @@ export class CommandAnalyzer {
       .split(/\s+/)
       .filter((t) => !t.startsWith("-"));
 
-    tokens.forEach((t) => {
-      const value = t.includes("=") ? t.split("=").slice(1).join("=") : t;
-
-      if (
-        value.includes("/") ||
-        value.startsWith("~") ||
-        value.startsWith(".") ||
-        value.startsWith("$")
-      ) {
-        paths.push(value);
-      }
-    });
+    for (let i = 1; i < tokens.length; i++) {
+      const value = tokens[i].includes("=")
+        ? tokens[i].split("=").slice(1).join("=")
+        : tokens[i];
+      if (value) paths.push(value);
+    }
 
     return paths;
   }
@@ -182,11 +194,26 @@ export class CommandAnalyzer {
     return { blocked: false };
   }
 
-  private isPathAllowed(path: string, allowDevicePaths: boolean): boolean {
-    if (this.pathValidator.isWithinWorkingDir(path)) return true;
-    return allowDevicePaths
-      ? this.pathValidator.isSafeForWrite(path)
-      : this.pathValidator.isTempPath(path);
+  private isCdCommand(command: string): boolean {
+    return this.getBaseCommand(command) === "cd";
+  }
+
+  private extractCdTarget(command: string): string | null {
+    const trimmed = command.trim();
+
+    const quotedMatch = trimmed.match(/^cd\s+["']([^"']+)["']/);
+    if (quotedMatch) return quotedMatch[1];
+
+    const tokens = trimmed.split(/\s+/);
+    if (tokens[0] !== "cd") return null;
+    if (tokens.length === 1) return homedir();
+
+    let i = 1;
+    while (i < tokens.length && tokens[i].startsWith("-")) {
+      i++;
+    }
+
+    return tokens[i] || null;
   }
 
   private checkDangerousGitCommands(command: string): AnalysisResult {
@@ -207,7 +234,10 @@ export class CommandAnalyzer {
 
       const paths = this.extractPaths(command);
       for (const path of paths) {
-        if (!this.isPathAllowed(path, false)) {
+        if (
+          !this.pathValidator.isWithinWorkingDir(path) &&
+          !this.pathValidator.isTempPath(path)
+        ) {
           return {
             blocked: true,
             reason: `Command "${name}" targets path outside working directory: ${path}`,
@@ -218,7 +248,10 @@ export class CommandAnalyzer {
     return { blocked: false };
   }
 
-  private checkDangerousCommand(command: string): AnalysisResult {
+  private checkDangerousCommand(
+    command: string,
+    resolveBase?: string
+  ): AnalysisResult {
     const baseCmd = this.getBaseCommand(command);
 
     if (!DANGEROUS_COMMANDS.has(baseCmd)) {
@@ -227,41 +260,47 @@ export class CommandAnalyzer {
 
     const paths = this.extractPaths(command);
 
-    // cp: only check destination (last path), source is just read
+    // cp: only destination matters, source is read-only
     if (baseCmd === "cp" && paths.length > 0) {
       const dest = paths[paths.length - 1];
-      if (!this.isPathAllowed(dest, true)) {
+      if (!this.isPathAllowed(dest, true, resolveBase)) {
         return {
           blocked: true,
-          reason: `Command "${baseCmd}" targets path outside working directory: ${dest}`,
+          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(
+            dest,
+            resolveBase
+          )}`,
         };
       }
       return { blocked: false };
     }
 
-    // dd: only check output path (of=), input path (if=) is just read
+    // dd: only of= matters, if= is read-only
     if (baseCmd === "dd") {
       const ofMatch = command.match(/\bof=["']?([^"'\s]+)["']?/);
-      if (ofMatch) {
-        const outputPath = ofMatch[1];
-        if (!this.isPathAllowed(outputPath, true)) {
-          return {
-            blocked: true,
-            reason: `Command "dd" targets path outside working directory: ${outputPath}`,
-          };
-        }
+      if (ofMatch && !this.isPathAllowed(ofMatch[1], true, resolveBase)) {
+        return {
+          blocked: true,
+          reason: `Command "dd" targets path outside working directory: ${this.resolvePath(
+            ofMatch[1],
+            resolveBase
+          )}`,
+        };
       }
       return { blocked: false };
     }
 
-    // Write commands: allow device paths (e.g., truncate /dev/null)
-    const isWriteCommand = baseCmd === "truncate";
+    // truncate: allow device paths like /dev/null
+    const allowDevicePaths = baseCmd === "truncate";
 
     for (const path of paths) {
-      if (!this.isPathAllowed(path, isWriteCommand)) {
+      if (!this.isPathAllowed(path, allowDevicePaths, resolveBase)) {
         return {
           blocked: true,
-          reason: `Command "${baseCmd}" targets path outside working directory: ${path}`,
+          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(
+            path,
+            resolveBase
+          )}`,
         };
       }
     }
@@ -280,12 +319,24 @@ export class CommandAnalyzer {
     if (patternResult.blocked) return patternResult;
 
     const commands = this.splitCommands(command);
+    let currentWorkDir = this.workingDirectory;
 
     for (const cmd of commands) {
       const trimmed = cmd.trim();
       if (!trimmed) continue;
 
-      const result = this.checkDangerousCommand(trimmed);
+      if (this.isCdCommand(trimmed)) {
+        const target = this.extractCdTarget(trimmed);
+        if (target) {
+          const expanded = this.pathValidator.expand(target);
+          currentWorkDir = resolve(currentWorkDir, expanded);
+        }
+        continue;
+      }
+
+      const resolveBase =
+        currentWorkDir !== this.workingDirectory ? currentWorkDir : undefined;
+      const result = this.checkDangerousCommand(trimmed, resolveBase);
       if (result.blocked) return result;
     }
 

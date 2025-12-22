@@ -6,7 +6,7 @@ import { SAFE_WRITE_PATHS, TEMP_PATHS } from "./constants.js";
 export class PathValidator {
   constructor(private workingDirectory: string) {}
 
-  private expand(path: string): string {
+  expand(path: string): string {
     return path
       .replace(/^~(?=\/|$)/, homedir())
       .replace(/\$\{?(\w+)\}?/g, (_, name) => {
