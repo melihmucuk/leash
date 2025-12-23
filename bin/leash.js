@@ -14,7 +14,18 @@ function getDistPath() {
 
 function getConfigPath(platformKey) {
   const platform = PLATFORMS[platformKey];
-  return platform ? join(homedir(), platform.configPath) : null;
+  if (!platform) return null;
+
+  // Support multiple config paths (first existing wins, fallback to last)
+  if (platform.configPaths) {
+    for (const p of platform.configPaths) {
+      const full = join(homedir(), p);
+      if (existsSync(full)) return full;
+    }
+    return join(homedir(), platform.configPaths.at(-1));
+  }
+
+  return join(homedir(), platform.configPath);
 }
 
 function getLeashPath(platformKey) {

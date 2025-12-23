@@ -4,7 +4,10 @@ import { dirname } from "path";
 export const PLATFORMS = {
   opencode: {
     name: "OpenCode",
-    configPath: ".config/opencode/config.json",
+    configPaths: [
+      ".config/opencode/opencode.jsonc",
+      ".config/opencode/opencode.json",
+    ],
     distPath: "opencode/leash.js",
     setup: (config, leashPath) => {
       config.plugins = config.plugins || [];

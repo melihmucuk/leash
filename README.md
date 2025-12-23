@@ -57,7 +57,7 @@ Add to `~/.pi/agent/settings.json`:
 
 **OpenCode** - [docs](https://opencode.ai/docs/plugins/)
 
-Add to `~/.config/opencode/config.json`:
+Add to `~/.config/opencode/opencode.json` (or `opencode.jsonc` if you use that):
 
 ```json
 {
