@@ -1,17 +1,44 @@
 {
-  "name": "leash",
+  "name": "@melihmucuk/leash",
   "version": "1.0.0",
   "type": "module",
   "description": "Security guardrails for AI coding agents",
-  "private": true,
+  "bin": {
+    "leash": "./bin/leash.js"
+  },
+  "files": [
+    "dist/",
+    "bin/",
+    "!bin/test/"
+  ],
   "author": "Melih Mucuk",
   "license": "MIT",
+  "keywords": [
+    "ai",
+    "security",
+    "sandbox",
+    "guardrails",
+    "coding-agent",
+    "claude",
+    "openai",
+    "anthropic",
+    "llm",
+    "cli",
+    "plugin",
+    "hooks",
+    "file-system",
+    "protection"
+  ],
+  "homepage": "https://github.com/melihmucuk/leash",
+  "bugs": {
+    "url": "https://github.com/melihmucuk/leash/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/melihmucuk/leash.git"
   },
   "scripts": {
-    "test": "npm run build:core && node --test 'packages/core/test/*.test.js'",
+    "test": "npm run build:core && node --test 'packages/core/test/*.test.js' 'bin/test/*.test.js'",
     "typecheck": "tsc --noEmit",
     "build": "npm run build:core && npm run build:opencode && npm run build:pi && npm run build:claude-code && npm run build:factory",
     "build:core": "esbuild packages/core/*.ts --outdir=packages/core/lib --platform=node --format=esm",
@@ -21,10 +48,10 @@
     "build:factory": "esbuild packages/factory/leash.ts --bundle --outfile=dist/factory/leash.js --platform=node --format=esm"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "^0.25.3",
-    "@opencode-ai/plugin": "^1.0.184",
-    "@types/node": "^22.0.0",
-    "esbuild": "^0.27.1",
-    "typescript": "^5.0.0"
+    "@mariozechner/pi-coding-agent": "^0.27.2",
+    "@opencode-ai/plugin": "^1.0.191",
+    "@types/node": "^22.19.3",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.9.3"
   }
 }

@@ -1,5 +1,7 @@
 # Leash 🔒
 
+[![npm version](https://img.shields.io/npm/v/@melihmucuk/leash.svg)](https://www.npmjs.com/package/@melihmucuk/leash)
+
 **Security guardrails for AI coding agents.** Sandboxes file system access, blocks dangerous commands outside project directory, prevents destructive git operations, catches agent hallucinations before they cause damage.
 
 ## Why Leash?
@@ -17,37 +19,53 @@ AI agents can hallucinate dangerous commands. Leash sandboxes them:
 ## Quick Start
 
 ```bash
-git clone https://github.com/melihmucuk/leash.git ~/leash
+npm install -g @melihmucuk/leash
+leash --setup <platform>
+```
+
+| Platform | Command |
+|----------|---------|
+| OpenCode | `leash --setup opencode` |
+| Pi Coding Agent | `leash --setup pi` |
+| Claude Code | `leash --setup claude-code` |
+| Factory Droid | `leash --setup factory` |
+
+Restart your agent. Done!
+
+```bash
+# Update anytime
+npm update -g @melihmucuk/leash
+
+# Remove from a platform
+leash --remove <platform>
 ```
 
 <details>
-<summary><b>Pi Coding Agent</b> - <a href="https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/hooks.md">docs</a></summary>
+<summary><b>Manual Setup</b></summary>
+
+If you prefer manual configuration, use `leash --path <platform>` to get the path and add it to your config file.
+
+**Pi Coding Agent** - [docs](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/hooks.md)
 
 Add to `~/.pi/agent/settings.json`:
 
 ```json
 {
-  "hooks": ["~/leash/dist/pi/leash.js"]
+  "hooks": ["<path from leash --path pi>"]
 }
 ```
 
-</details>
-
-<details>
-<summary><b>OpenCode</b> - <a href="https://opencode.ai/docs/plugins/">docs</a></summary>
+**OpenCode** - [docs](https://opencode.ai/docs/plugins/)
 
 Add to `~/.config/opencode/config.json`:
 
 ```json
 {
-  "plugins": ["/full/path/to/leash/dist/opencode/leash.js"]
+  "plugins": ["<path from leash --path opencode>"]
 }
 ```
 
-</details>
-
-<details>
-<summary><b>Claude Code</b> - <a href="https://code.claude.com/docs/en/hooks-guide">docs</a></summary>
+**Claude Code** - [docs](https://code.claude.com/docs/en/hooks-guide)
 
 Add to `~/.claude/settings.json`:
 
@@ -60,7 +78,7 @@ Add to `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "node ~/leash/dist/claude-code/leash.js"
+            "command": "node <path from leash --path claude-code>"
           }
         ]
       }
@@ -69,10 +87,7 @@ Add to `~/.claude/settings.json`:
 }
 ```
 
-</details>
-
-<details>
-<summary><b>Factory Droid</b> - <a href="https://docs.factory.ai/cli/configuration/hooks-guide">docs</a></summary>
+**Factory Droid** - [docs](https://docs.factory.ai/cli/configuration/hooks-guide)
 
 Add to `~/.factory/settings.json`:
 
@@ -85,7 +100,7 @@ Add to `~/.factory/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "node ~/leash/dist/factory/leash.js"
+            "command": "node <path from leash --path factory>"
           }
         ]
       }
@@ -95,8 +110,6 @@ Add to `~/.factory/settings.json`:
 ```
 
 </details>
-
-Restart your agent. Done! Update anytime with `cd ~/leash && git pull`.
 
 ## What Gets Blocked
 
