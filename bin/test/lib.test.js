@@ -39,17 +39,17 @@ test("opencode: setup on empty config", () => {
   assert.strictEqual(result.platform, "OpenCode");
 
   const config = readTestConfig("opencode-empty");
-  assert.deepStrictEqual(config.plugins, [LEASH_PATH]);
+  assert.deepStrictEqual(config.plugin, [LEASH_PATH]);
 
   cleanup();
 });
 
-test("opencode: setup merges with existing plugins", () => {
+test("opencode: setup merges with existing plugin", () => {
   setup();
   const configPath = getConfigPath("opencode-merge");
   writeTestConfig("opencode-merge", {
     provider: "anthropic",
-    plugins: ["/other/plugin.js"],
+    plugin: ["/other/plugin.js"],
   });
 
   const result = setupPlatform("opencode", configPath, LEASH_PATH);
@@ -58,7 +58,7 @@ test("opencode: setup merges with existing plugins", () => {
 
   const config = readTestConfig("opencode-merge");
   assert.strictEqual(config.provider, "anthropic");
-  assert.deepStrictEqual(config.plugins, ["/other/plugin.js", LEASH_PATH]);
+  assert.deepStrictEqual(config.plugin, ["/other/plugin.js", LEASH_PATH]);
 
   cleanup();
 });
@@ -67,7 +67,7 @@ test("opencode: setup skips if already installed", () => {
   setup();
   const configPath = getConfigPath("opencode-skip");
   writeTestConfig("opencode-skip", {
-    plugins: ["/some/leash/path.js"],
+    plugin: ["/some/leash/path.js"],
   });
 
   const result = setupPlatform("opencode", configPath, LEASH_PATH);
@@ -82,7 +82,7 @@ test("opencode: remove works", () => {
   const configPath = getConfigPath("opencode-remove");
   writeTestConfig("opencode-remove", {
     provider: "anthropic",
-    plugins: ["/other/plugin.js", LEASH_PATH],
+    plugin: ["/other/plugin.js", LEASH_PATH],
   });
 
   const result = removePlatform("opencode", configPath);
@@ -91,7 +91,7 @@ test("opencode: remove works", () => {
 
   const config = readTestConfig("opencode-remove");
   assert.strictEqual(config.provider, "anthropic");
-  assert.deepStrictEqual(config.plugins, ["/other/plugin.js"]);
+  assert.deepStrictEqual(config.plugin, ["/other/plugin.js"]);
 
   cleanup();
 });
@@ -100,7 +100,7 @@ test("opencode: remove when not installed", () => {
   setup();
   const configPath = getConfigPath("opencode-not-installed");
   writeTestConfig("opencode-not-installed", {
-    plugins: ["/other/plugin.js"],
+    plugin: ["/other/plugin.js"],
   });
 
   const result = removePlatform("opencode", configPath);

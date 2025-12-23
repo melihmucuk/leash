@@ -10,18 +10,18 @@ export const PLATFORMS = {
     ],
     distPath: "opencode/leash.js",
     setup: (config, leashPath) => {
-      config.plugins = config.plugins || [];
-      if (config.plugins.some((p) => p.includes("leash"))) {
+      config.plugin = config.plugin || [];
+      if (config.plugin.some((p) => p.includes("leash"))) {
         return { skipped: true };
       }
-      config.plugins.push(leashPath);
+      config.plugin.push(leashPath);
       return { skipped: false };
     },
     remove: (config) => {
-      if (!config.plugins) return false;
-      const before = config.plugins.length;
-      config.plugins = config.plugins.filter((p) => !p.includes("leash"));
-      return config.plugins.length < before;
+      if (!config.plugin) return false;
+      const before = config.plugin.length;
+      config.plugin = config.plugin.filter((p) => !p.includes("leash"));
+      return config.plugin.length < before;
     },
   },
   pi: {

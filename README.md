@@ -61,7 +61,7 @@ Add to `~/.config/opencode/opencode.json` (or `opencode.jsonc` if you use that):
 
 ```json
 {
-  "plugins": ["<path from leash --path opencode>"]
+  "plugin": ["<path from leash --path opencode>"]
 }
 ```
 
