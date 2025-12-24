@@ -1,6 +1,6 @@
 {
   "name": "@melihmucuk/leash",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "type": "module",
   "description": "Security guardrails for AI coding agents",
   "bin": {
@@ -9,7 +9,8 @@
   "files": [
     "dist/",
     "bin/",
-    "!bin/test/"
+    "!bin/test/",
+    "packages/core/lib/version-checker.js"
   ],
   "author": "Melih Mucuk",
   "license": "MIT",
