@@ -34,6 +34,7 @@ export class CommandAnalyzer {
   ): boolean {
     const resolved = this.resolvePath(path, resolveBase);
     if (this.pathValidator.isWithinWorkingDir(resolved)) return true;
+    if (this.pathValidator.isPlatformPath(resolved)) return true;
     return allowDevicePaths
       ? this.pathValidator.isSafeForWrite(resolved)
       : this.pathValidator.isTempPath(resolved);
@@ -200,7 +201,8 @@ export class CommandAnalyzer {
       }
       if (
         !this.pathValidator.isSafeForWrite(path) &&
-        !this.pathValidator.isWithinWorkingDir(path)
+        !this.pathValidator.isWithinWorkingDir(path) &&
+        !this.pathValidator.isPlatformPath(path)
       ) {
         return {
           blocked: true,
@@ -260,7 +262,8 @@ export class CommandAnalyzer {
         const resolved = this.resolvePath(path, resolveBase);
         if (
           !this.pathValidator.isWithinWorkingDir(resolved) &&
-          !this.pathValidator.isTempPath(resolved)
+          !this.pathValidator.isTempPath(resolved) &&
+          !this.pathValidator.isPlatformPath(resolved)
         ) {
           return {
             blocked: true,
@@ -464,7 +467,8 @@ export class CommandAnalyzer {
 
     if (
       !this.pathValidator.isSafeForWrite(path) &&
-      !this.pathValidator.isWithinWorkingDir(path)
+      !this.pathValidator.isWithinWorkingDir(path) &&
+      !this.pathValidator.isPlatformPath(path)
     ) {
       return {
         blocked: true,

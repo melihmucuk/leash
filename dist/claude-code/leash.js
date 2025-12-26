@@ -32,6 +32,12 @@ var DANGEROUS_PATTERNS = [
 ];
 var REDIRECT_PATTERN = />{1,2}\s*(?:"([^"]+)"|'([^']+)'|([^\s;|&>]+))/g;
 var DEVICE_PATHS = ["/dev/null", "/dev/stdin", "/dev/stdout", "/dev/stderr"];
+var PLATFORM_PATHS = [
+  ".claude",
+  ".factory",
+  ".pi",
+  ".config/opencode"
+];
 var TEMP_PATHS = [
   "/tmp",
   "/var/tmp",
@@ -103,6 +109,12 @@ var PathValidator = class {
     const resolved = this.resolveReal(path);
     return this.matchesAny(resolved, TEMP_PATHS);
   }
+  isPlatformPath(path) {
+    const resolved = this.resolveReal(path);
+    const home = homedir();
+    const platformPaths = PLATFORM_PATHS.map((p) => `${home}/${p}`);
+    return this.matchesAny(resolved, platformPaths);
+  }
   isProtectedPath(path) {
     if (!this.isWithinWorkingDir(path)) {
       return { protected: false };
@@ -134,6 +146,7 @@ var CommandAnalyzer = class {
   isPathAllowed(path, allowDevicePaths, resolveBase) {
     const resolved = this.resolvePath(path, resolveBase);
     if (this.pathValidator.isWithinWorkingDir(resolved)) return true;
+    if (this.pathValidator.isPlatformPath(resolved)) return true;
     return allowDevicePaths ? this.pathValidator.isSafeForWrite(resolved) : this.pathValidator.isTempPath(resolved);
   }
   checkProtectedPath(path, context, resolveBase) {
@@ -262,7 +275,7 @@ var CommandAnalyzer = class {
       if (!path || path.startsWith("&")) {
         continue;
       }
-      if (!this.pathValidator.isSafeForWrite(path) && !this.pathValidator.isWithinWorkingDir(path)) {
+      if (!this.pathValidator.isSafeForWrite(path) && !this.pathValidator.isWithinWorkingDir(path) && !this.pathValidator.isPlatformPath(path)) {
         return {
           blocked: true,
           reason: `Redirect to path outside working directory: ${path}`
@@ -306,7 +319,7 @@ var CommandAnalyzer = class {
       const paths = this.extractPaths(command);
       for (const path of paths) {
         const resolved = this.resolvePath(path, resolveBase);
-        if (!this.pathValidator.isWithinWorkingDir(resolved) && !this.pathValidator.isTempPath(resolved)) {
+        if (!this.pathValidator.isWithinWorkingDir(resolved) && !this.pathValidator.isTempPath(resolved) && !this.pathValidator.isPlatformPath(resolved)) {
           return {
             blocked: true,
             reason: `Command "${name}" targets path outside working directory: ${path}`
@@ -456,7 +469,7 @@ var CommandAnalyzer = class {
   }
   validatePath(path) {
     if (!path) return { blocked: false };
-    if (!this.pathValidator.isSafeForWrite(path) && !this.pathValidator.isWithinWorkingDir(path)) {
+    if (!this.pathValidator.isSafeForWrite(path) && !this.pathValidator.isWithinWorkingDir(path) && !this.pathValidator.isPlatformPath(path)) {
       return {
         blocked: true,
         reason: `File operation targets path outside working directory: ${path}`

@@ -73,6 +73,27 @@ test("/dev/null is not temp path", () => {
   assert.strictEqual(validator.isTempPath("/dev/null"), false);
 });
 
+// isPlatformPath
+test("recognizes ~/.claude as platform path", () => {
+  assert.strictEqual(validator.isPlatformPath("~/.claude/plans/test.md"), true);
+});
+
+test("recognizes ~/.factory as platform path", () => {
+  assert.strictEqual(validator.isPlatformPath("~/.factory/settings.json"), true);
+});
+
+test("recognizes ~/.pi as platform path", () => {
+  assert.strictEqual(validator.isPlatformPath("~/.pi/agent/test.md"), true);
+});
+
+test("recognizes ~/.config/opencode as platform path", () => {
+  assert.strictEqual(validator.isPlatformPath("~/.config/opencode/config.json"), true);
+});
+
+test("does not recognize arbitrary home paths as platform path", () => {
+  assert.strictEqual(validator.isPlatformPath("~/Documents/file.txt"), false);
+});
+
 // isProtectedPath
 test("protects .env", () => {
   const result = validator.isProtectedPath(".env");

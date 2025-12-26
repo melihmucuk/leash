@@ -543,3 +543,54 @@ test("blocks xargs rm on .env files", () => {
   assert.strictEqual(result.blocked, true);
   assert.ok(result.reason.includes(".env files"));
 });
+
+// Platform paths - allowed for write/delete operations
+test("allows rm in ~/.claude", () => {
+  const result = analyzer.analyze("rm ~/.claude/plans/old-plan.md");
+  assert.strictEqual(result.blocked, false);
+});
+
+test("allows rm in ~/.factory", () => {
+  const result = analyzer.analyze("rm ~/.factory/cache/temp.json");
+  assert.strictEqual(result.blocked, false);
+});
+
+test("allows rm in ~/.pi", () => {
+  const result = analyzer.analyze("rm ~/.pi/agent/old.md");
+  assert.strictEqual(result.blocked, false);
+});
+
+test("allows rm in ~/.config/opencode", () => {
+  const result = analyzer.analyze("rm ~/.config/opencode/cache.json");
+  assert.strictEqual(result.blocked, false);
+});
+
+test("validatePath allows ~/.claude path", () => {
+  const result = analyzer.validatePath("~/.claude/plans/test.md");
+  assert.strictEqual(result.blocked, false);
+});
+
+test("validatePath allows ~/.config/opencode path", () => {
+  const result = analyzer.validatePath("~/.config/opencode/settings.json");
+  assert.strictEqual(result.blocked, false);
+});
+
+test("allows redirect to ~/.claude", () => {
+  const result = analyzer.analyze('echo "plan" > ~/.claude/plans/new.md');
+  assert.strictEqual(result.blocked, false);
+});
+
+test("allows find -delete in ~/.claude", () => {
+  const result = analyzer.analyze("find ~/.claude/plans -name '*.tmp' -delete");
+  assert.strictEqual(result.blocked, false);
+});
+
+test("allows rsync --delete to ~/.claude", () => {
+  const result = analyzer.analyze("rsync -av --delete ./src/ ~/.claude/backup/");
+  assert.strictEqual(result.blocked, false);
+});
+
+test("allows xargs rm in ~/.pi", () => {
+  const result = analyzer.analyze("find ~/.pi/cache | xargs rm");
+  assert.strictEqual(result.blocked, false);
+});

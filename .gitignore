@@ -2,7 +2,6 @@ node_modules/
 packages/core/lib/
 *.log
 .DS_Store
-AGENTS.md
 todo.md
 package-lock.json
 yarn.lock

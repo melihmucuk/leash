@@ -25,6 +25,13 @@ export const REDIRECT_PATTERN =
 
 const DEVICE_PATHS = ["/dev/null", "/dev/stdin", "/dev/stdout", "/dev/stderr"];
 
+export const PLATFORM_PATHS = [
+  ".claude",
+  ".factory",
+  ".pi",
+  ".config/opencode",
+];
+
 export const TEMP_PATHS = [
   "/tmp",
   "/var/tmp",

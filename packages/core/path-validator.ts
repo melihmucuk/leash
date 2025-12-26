@@ -4,6 +4,7 @@ import { realpathSync } from "fs";
 import {
   SAFE_WRITE_PATHS,
   TEMP_PATHS,
+  PLATFORM_PATHS,
   PROTECTED_PATTERNS,
 } from "./constants.js";
 
@@ -60,6 +61,13 @@ export class PathValidator {
   isTempPath(path: string): boolean {
     const resolved = this.resolveReal(path);
     return this.matchesAny(resolved, TEMP_PATHS);
+  }
+
+  isPlatformPath(path: string): boolean {
+    const resolved = this.resolveReal(path);
+    const home = homedir();
+    const platformPaths = PLATFORM_PATHS.map((p) => `${home}/${p}`);
+    return this.matchesAny(resolved, platformPaths);
   }
 
   isProtectedPath(path: string): { protected: boolean; name?: string } {

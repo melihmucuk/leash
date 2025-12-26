@@ -174,6 +174,8 @@ rm -rf /tmp/build-cache           # ✅ Temp directory
 rm .env.example                   # ✅ Example files allowed
 git commit -m "message"           # ✅ Safe git commands
 git push origin main              # ✅ Normal push (no --force)
+echo "plan" > ~/.claude/plans/x   # ✅ Platform config directories
+rm ~/.pi/agent/old.md             # ✅ Platform config directories
 ```
 
 <details>
@@ -286,6 +288,14 @@ find ./logs | xargs rm
 rm -rf /tmp/build-cache
 echo "data" > /tmp/output.txt
 rsync -av --delete ./src/ /tmp/backup/
+
+# Platform config directories
+rm ~/.claude/plans/old-plan.md
+echo "config" > ~/.factory/cache.json
+rm ~/.pi/agent/temp.md
+rm ~/.config/opencode/cache.json
+find ~/.claude -name '*.tmp' -delete
+rsync -av --delete ./src/ ~/.pi/backup/
 
 # Device paths
 echo "x" > /dev/null
