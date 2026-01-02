@@ -301,7 +301,11 @@ export class CommandAnalyzer {
             reason: `Command "${name}" targets path outside working directory: ${path}`,
           };
         }
-        const result = this.checkProtectedPath(path, `Command "${name}"`, resolveBase);
+        const result = this.checkProtectedPath(
+          path,
+          `Command "${name}"`,
+          resolveBase
+        );
         if (result.blocked) return result;
       }
     }
@@ -318,7 +322,10 @@ export class CommandAnalyzer {
     if (!this.isPathAllowed(dest, true, resolveBase)) {
       return {
         blocked: true,
-        reason: `Command "cp" targets path outside working directory: ${this.resolvePath(dest, resolveBase)}`,
+        reason: `Command "cp" targets path outside working directory: ${this.resolvePath(
+          dest,
+          resolveBase
+        )}`,
       };
     }
     return this.checkProtectedPath(dest, 'Command "cp"', resolveBase);
@@ -335,7 +342,10 @@ export class CommandAnalyzer {
     if (!this.isPathAllowed(dest, true, resolveBase)) {
       return {
         blocked: true,
-        reason: `Command "dd" targets path outside working directory: ${this.resolvePath(dest, resolveBase)}`,
+        reason: `Command "dd" targets path outside working directory: ${this.resolvePath(
+          dest,
+          resolveBase
+        )}`,
       };
     }
     return this.checkProtectedPath(dest, 'Command "dd"', resolveBase);
@@ -353,7 +363,10 @@ export class CommandAnalyzer {
     if (!this.isPathAllowed(dest, true, resolveBase)) {
       return {
         blocked: true,
-        reason: `Command "mv" targets path outside working directory: ${this.resolvePath(dest, resolveBase)}`,
+        reason: `Command "mv" targets path outside working directory: ${this.resolvePath(
+          dest,
+          resolveBase
+        )}`,
       };
     }
     const destResult = this.checkProtectedPath(
@@ -367,7 +380,10 @@ export class CommandAnalyzer {
       if (!this.isPathAllowed(source, false, resolveBase)) {
         return {
           blocked: true,
-          reason: `Command "mv" targets path outside working directory: ${this.resolvePath(source, resolveBase)}`,
+          reason: `Command "mv" targets path outside working directory: ${this.resolvePath(
+            source,
+            resolveBase
+          )}`,
         };
       }
       const sourceResult = this.checkProtectedPath(
@@ -390,7 +406,10 @@ export class CommandAnalyzer {
       if (!this.isPathAllowed(path, false, resolveBase)) {
         return {
           blocked: true,
-          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(path, resolveBase)}`,
+          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(
+            path,
+            resolveBase
+          )}`,
         };
       }
       const result = this.checkProtectedPath(
@@ -414,7 +433,10 @@ export class CommandAnalyzer {
       if (!this.isPathAllowed(path, allowDevicePaths, resolveBase)) {
         return {
           blocked: true,
-          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(path, resolveBase)}`,
+          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(
+            path,
+            resolveBase
+          )}`,
         };
       }
       const result = this.checkProtectedPath(

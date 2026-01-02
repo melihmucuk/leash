@@ -345,7 +345,11 @@ var CommandAnalyzer = class {
             reason: `Command "${name}" targets path outside working directory: ${path}`
           };
         }
-        const result = this.checkProtectedPath(path, `Command "${name}"`, resolveBase);
+        const result = this.checkProtectedPath(
+          path,
+          `Command "${name}"`,
+          resolveBase
+        );
         if (result.blocked) return result;
       }
     }
@@ -357,7 +361,10 @@ var CommandAnalyzer = class {
     if (!this.isPathAllowed(dest, true, resolveBase)) {
       return {
         blocked: true,
-        reason: `Command "cp" targets path outside working directory: ${this.resolvePath(dest, resolveBase)}`
+        reason: `Command "cp" targets path outside working directory: ${this.resolvePath(
+          dest,
+          resolveBase
+        )}`
       };
     }
     return this.checkProtectedPath(dest, 'Command "cp"', resolveBase);
@@ -369,7 +376,10 @@ var CommandAnalyzer = class {
     if (!this.isPathAllowed(dest, true, resolveBase)) {
       return {
         blocked: true,
-        reason: `Command "dd" targets path outside working directory: ${this.resolvePath(dest, resolveBase)}`
+        reason: `Command "dd" targets path outside working directory: ${this.resolvePath(
+          dest,
+          resolveBase
+        )}`
       };
     }
     return this.checkProtectedPath(dest, 'Command "dd"', resolveBase);
@@ -381,7 +391,10 @@ var CommandAnalyzer = class {
     if (!this.isPathAllowed(dest, true, resolveBase)) {
       return {
         blocked: true,
-        reason: `Command "mv" targets path outside working directory: ${this.resolvePath(dest, resolveBase)}`
+        reason: `Command "mv" targets path outside working directory: ${this.resolvePath(
+          dest,
+          resolveBase
+        )}`
       };
     }
     const destResult = this.checkProtectedPath(
@@ -394,7 +407,10 @@ var CommandAnalyzer = class {
       if (!this.isPathAllowed(source, false, resolveBase)) {
         return {
           blocked: true,
-          reason: `Command "mv" targets path outside working directory: ${this.resolvePath(source, resolveBase)}`
+          reason: `Command "mv" targets path outside working directory: ${this.resolvePath(
+            source,
+            resolveBase
+          )}`
         };
       }
       const sourceResult = this.checkProtectedPath(
@@ -411,7 +427,10 @@ var CommandAnalyzer = class {
       if (!this.isPathAllowed(path, false, resolveBase)) {
         return {
           blocked: true,
-          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(path, resolveBase)}`
+          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(
+            path,
+            resolveBase
+          )}`
         };
       }
       const result = this.checkProtectedPath(
@@ -429,7 +448,10 @@ var CommandAnalyzer = class {
       if (!this.isPathAllowed(path, allowDevicePaths, resolveBase)) {
         return {
           blocked: true,
-          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(path, resolveBase)}`
+          reason: `Command "${baseCmd}" targets path outside working directory: ${this.resolvePath(
+            path,
+            resolveBase
+          )}`
         };
       }
       const result = this.checkProtectedPath(
@@ -544,17 +566,15 @@ async function checkForUpdates() {
 // packages/pi/leash.ts
 function leash_default(pi) {
   let analyzer = null;
-  pi.on("session", async (event, ctx) => {
-    if (event.reason === "start") {
-      analyzer = new CommandAnalyzer(ctx.cwd);
-      ctx.ui.notify("\u{1F512} Leash active", "info");
-      const update = await checkForUpdates();
-      if (update.hasUpdate) {
-        ctx.ui.notify(
-          `\u{1F504} Leash ${update.latestVersion} available. Run: leash --update (restart required)`,
-          "warning"
-        );
-      }
+  pi.on("session_start", async (_event, ctx) => {
+    analyzer = new CommandAnalyzer(ctx.cwd);
+    ctx.ui.notify("\u{1F512} Leash active", "info");
+    const update = await checkForUpdates();
+    if (update.hasUpdate) {
+      ctx.ui.notify(
+        `\u{1F504} Leash ${update.latestVersion} available. Run: leash --update (restart required)`,
+        "warning"
+      );
     }
   });
   pi.on("tool_call", async (event, ctx) => {
