@@ -29,18 +29,18 @@ export const PLATFORMS = {
     configPath: ".pi/agent/settings.json",
     distPath: "pi/leash.js",
     setup: (config, leashPath) => {
-      config.hooks = config.hooks || [];
-      if (config.hooks.some((h) => h.includes("leash"))) {
+      config.extensions = config.extensions || [];
+      if (config.extensions.some((e) => e.includes("leash"))) {
         return { skipped: true };
       }
-      config.hooks.push(leashPath);
+      config.extensions.push(leashPath);
       return { skipped: false };
     },
     remove: (config) => {
-      if (!config.hooks) return false;
-      const before = config.hooks.length;
-      config.hooks = config.hooks.filter((h) => !h.includes("leash"));
-      return config.hooks.length < before;
+      if (!config.extensions) return false;
+      const before = config.extensions.length;
+      config.extensions = config.extensions.filter((e) => !e.includes("leash"));
+      return config.extensions.length < before;
     },
   },
   "claude-code": {

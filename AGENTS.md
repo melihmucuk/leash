@@ -93,13 +93,13 @@ Or manually add to `~/.pi/agent/settings.json`:
 
 ```json
 {
-  "hooks": ["<path from leash --path pi>"]
+  "extensions": ["<path from leash --path pi>"]
 }
 ```
 
 **Docs**: https://shittycodingagent.ai
 
-**Hook**: `tool_call` event
+**Event**: `tool_call`
 
 **Tools to guard**:
 

@@ -1,7 +1,7 @@
-import type { HookAPI } from "@mariozechner/pi-coding-agent/hooks";
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { CommandAnalyzer, checkForUpdates } from "../core/index.js";
 
-export default function (pi: HookAPI) {
+export default function (pi: ExtensionAPI) {
   let analyzer: CommandAnalyzer | null = null;
 
   pi.on("session_start", async (_event, ctx) => {

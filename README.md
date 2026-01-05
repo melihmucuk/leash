@@ -23,6 +23,7 @@ AI agents can hallucinate dangerous commands. Leash sandboxes them:
 <img height="400" alt="image" src="https://github.com/user-attachments/assets/94f0a4e5-db6c-4b14-bddd-b8984c51ed3d" />
 
 Links:
+
 1. [Claude CLI deleted my entire home directory (Dec 8th 2025)](https://www.reddit.com/r/ClaudeAI/comments/1pgxckk/claude_cli_deleted_my_entire_home_directory_wiped/)
 2. [Google Antigravity just deleted my drive (Nov 27th 2025)](https://www.reddit.com/r/google_antigravity/comments/1p82or6/google_antigravity_just_deleted_the_contents_of/)
 
@@ -56,13 +57,13 @@ Restart your agent. Done!
 
 If you prefer manual configuration, use `leash --path <platform>` to get the path and add it to your config file.
 
-**Pi Coding Agent** - [docs](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/hooks.md)
+**Pi Coding Agent** - [docs](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/extensions.md)
 
 Add to `~/.pi/agent/settings.json`:
 
 ```json
 {
-  "hooks": ["<path from leash --path pi>"]
+  "extensions": ["<path from leash --path pi>"]
 }
 ```
 
@@ -328,7 +329,7 @@ Near-zero latency impact on your workflow:
 | Platform    | Latency per tool call | Notes                                    |
 | ----------- | --------------------- | ---------------------------------------- |
 | OpenCode    | **~20µs**             | In-process plugin, near-zero overhead    |
-| Pi          | **~20µs**             | In-process hook, near-zero overhead      |
+| Pi          | **~20µs**             | In-process extension, near-zero overhead |
 | Claude Code | **~31ms**             | External process (~30ms Node.js startup) |
 | Factory     | **~31ms**             | External process (~30ms Node.js startup) |
 

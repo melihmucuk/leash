@@ -120,16 +120,16 @@ test("pi: setup on empty config", () => {
   assert.strictEqual(result.success, true);
 
   const config = readTestConfig("pi-empty");
-  assert.deepStrictEqual(config.hooks, [LEASH_PATH]);
+  assert.deepStrictEqual(config.extensions, [LEASH_PATH]);
 
   cleanup();
 });
 
-test("pi: setup merges with existing hooks", () => {
+test("pi: setup merges with existing extensions", () => {
   setup();
   const configPath = getConfigPath("pi-merge");
   writeTestConfig("pi-merge", {
-    hooks: ["/other/hook.js"],
+    extensions: ["/other/extension.js"],
   });
 
   const result = setupPlatform("pi", configPath, LEASH_PATH);
@@ -137,7 +137,7 @@ test("pi: setup merges with existing hooks", () => {
   assert.strictEqual(result.success, true);
 
   const config = readTestConfig("pi-merge");
-  assert.deepStrictEqual(config.hooks, ["/other/hook.js", LEASH_PATH]);
+  assert.deepStrictEqual(config.extensions, ["/other/extension.js", LEASH_PATH]);
 
   cleanup();
 });
@@ -146,7 +146,7 @@ test("pi: remove works", () => {
   setup();
   const configPath = getConfigPath("pi-remove");
   writeTestConfig("pi-remove", {
-    hooks: ["/other/hook.js", LEASH_PATH],
+    extensions: ["/other/extension.js", LEASH_PATH],
   });
 
   const result = removePlatform("pi", configPath);
@@ -154,7 +154,7 @@ test("pi: remove works", () => {
   assert.strictEqual(result.success, true);
 
   const config = readTestConfig("pi-remove");
-  assert.deepStrictEqual(config.hooks, ["/other/hook.js"]);
+  assert.deepStrictEqual(config.extensions, ["/other/extension.js"]);
 
   cleanup();
 });

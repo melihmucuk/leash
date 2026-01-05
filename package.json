@@ -1,6 +1,6 @@
 {
   "name": "@melihmucuk/leash",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "type": "module",
   "description": "Security guardrails for AI coding agents",
   "bin": {
@@ -49,7 +49,7 @@
     "build:factory": "esbuild packages/factory/leash.ts --bundle --outfile=dist/factory/leash.js --platform=node --format=esm"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "^0.31.0",
+    "@mariozechner/pi-coding-agent": "^0.36.0",
     "@opencode-ai/plugin": "^1.0.224",
     "@types/node": "^22.19.3",
     "esbuild": "^0.27.2",
