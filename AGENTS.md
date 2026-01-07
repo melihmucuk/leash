@@ -7,6 +7,7 @@ Security guardrails plugin for AI coding agents. Prevents accidental file operat
 ```
 packages/
   core/           # Constants, PathValidator, CommandAnalyzer, tests
+  cli/            # CLI tool (leash command)
   opencode/       # OpenCode plugin
   pi/             # Pi coding agent hook
   claude-code/    # Claude Code hook
@@ -37,7 +38,7 @@ See `packages/core/test/` for scenarios. Categories:
 
 ## Development
 
-1. `npm test` — builds core + runs tests
+1. `npm test` — builds core + cli lib, runs all tests
 2. `npm run build` — builds all platforms (dist/ committed)
 
 ---
