@@ -1,41 +1,39 @@
-#!/usr/bin/env node
-
 import { existsSync } from "fs";
 import { dirname, join } from "path";
 import { homedir } from "os";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 import { PLATFORMS, setupPlatform, removePlatform } from "./lib.js";
-import { checkForUpdates } from "../packages/core/lib/version-checker.js";
+import { checkForUpdates } from "../core/version-checker.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-function getDistPath() {
-  return join(__dirname, "..", "dist");
+function getDistPath(): string {
+  // Bundle is at dist/cli/leash.js, so dist/ is one level up
+  return join(__dirname, "..");
 }
 
-function getConfigPath(platformKey) {
+function getConfigPath(platformKey: string): string | null {
   const platform = PLATFORMS[platformKey];
   if (!platform) return null;
 
-  // Support multiple config paths (first existing wins, fallback to last)
   if (platform.configPaths) {
     for (const p of platform.configPaths) {
       const full = join(homedir(), p);
       if (existsSync(full)) return full;
     }
-    return join(homedir(), platform.configPaths.at(-1));
+    return join(homedir(), platform.configPaths.at(-1)!);
   }
 
-  return join(homedir(), platform.configPath);
+  return join(homedir(), platform.configPath!);
 }
 
-function getLeashPath(platformKey) {
+function getLeashPath(platformKey: string): string | null {
   const platform = PLATFORMS[platformKey];
   return platform ? join(getDistPath(), platform.distPath) : null;
 }
 
-function setup(platformKey) {
+function setup(platformKey: string): void {
   const configPath = getConfigPath(platformKey);
   const leashPath = getLeashPath(platformKey);
 
@@ -67,7 +65,7 @@ function setup(platformKey) {
   console.log(`[ok] Restart ${result.platform} to apply changes`);
 }
 
-function remove(platformKey) {
+function remove(platformKey: string): void {
   const configPath = getConfigPath(platformKey);
 
   if (!configPath) {
@@ -97,7 +95,7 @@ function remove(platformKey) {
   console.log(`[ok] Restart ${result.platform} to apply changes`);
 }
 
-function showPath(platformKey) {
+function showPath(platformKey: string): void {
   const leashPath = getLeashPath(platformKey);
 
   if (!leashPath) {
@@ -109,7 +107,7 @@ function showPath(platformKey) {
   console.log(leashPath);
 }
 
-async function update() {
+async function update(): Promise<void> {
   console.log("Checking for updates...");
 
   const result = await checkForUpdates();
@@ -131,7 +129,7 @@ async function update() {
   }
 }
 
-function showHelp() {
+function showHelp(): void {
   console.log(`
 leash - Security guardrails for AI coding agents
 

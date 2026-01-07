@@ -1,16 +1,13 @@
 {
   "name": "@melihmucuk/leash",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "type": "module",
   "description": "Security guardrails for AI coding agents",
   "bin": {
-    "leash": "./bin/leash.js"
+    "leash": "./dist/cli/leash.js"
   },
   "files": [
-    "dist/",
-    "bin/",
-    "!bin/test/",
-    "packages/core/lib/version-checker.js"
+    "dist/"
   ],
   "author": "Melih Mucuk",
   "license": "MIT",
@@ -39,20 +36,23 @@
     "url": "https://github.com/melihmucuk/leash.git"
   },
   "scripts": {
-    "test": "npm run build:core && node --test 'packages/core/test/*.test.js' 'bin/test/*.test.js'",
+    "test": "npm run build:core && npm run build:cli-lib && node --test 'packages/core/test/*.test.js' 'packages/cli/test/*.test.js'",
     "typecheck": "tsc --noEmit",
-    "build": "npm run build:core && npm run build:opencode && npm run build:pi && npm run build:claude-code && npm run build:factory",
+    "build": "npm run build:core && npm run build:cli && npm run build:opencode && npm run build:pi && npm run build:claude-code && npm run build:factory",
     "build:core": "esbuild packages/core/*.ts --outdir=packages/core/lib --platform=node --format=esm",
+    "build:cli-lib": "esbuild packages/cli/lib.ts --outdir=packages/cli/lib --platform=node --format=esm --main-fields=module,main",
+    "build:cli": "esbuild packages/cli/leash.ts --bundle --outfile=dist/cli/leash.js --platform=node --format=esm --main-fields=module,main --banner:js='#!/usr/bin/env node'",
     "build:opencode": "esbuild packages/opencode/leash.ts --bundle --outfile=dist/opencode/leash.js --platform=node --format=esm --external:@opencode-ai/plugin",
     "build:pi": "esbuild packages/pi/leash.ts --bundle --outfile=dist/pi/leash.js --platform=node --format=esm --external:@mariozechner/pi-coding-agent",
     "build:claude-code": "esbuild packages/claude-code/leash.ts --bundle --outfile=dist/claude-code/leash.js --platform=node --format=esm",
     "build:factory": "esbuild packages/factory/leash.ts --bundle --outfile=dist/factory/leash.js --platform=node --format=esm"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "^0.36.0",
-    "@opencode-ai/plugin": "^1.0.224",
+    "@mariozechner/pi-coding-agent": "^0.37.8",
+    "@opencode-ai/plugin": "^1.1.4",
     "@types/node": "^22.19.3",
     "esbuild": "^0.27.2",
+    "jsonc-parser": "^3.3.1",
     "typescript": "^5.9.3"
   }
 }

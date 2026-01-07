@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { mkdirSync, rmSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { setupPlatform, removePlatform, readConfig } from "../lib.js";
+import { setupPlatform, removePlatform, readConfig } from "../lib/lib.js";
 
 const TEST_DIR = join(tmpdir(), "leash-test-" + Date.now());
 const LEASH_PATH = "/mock/path/to/leash.js";
@@ -110,6 +110,59 @@ test("opencode: remove when not installed", () => {
   cleanup();
 });
 
+test("opencode: setup preserves JSONC comments", () => {
+  setup();
+  const configPath = join(TEST_DIR, "opencode-jsonc.jsonc");
+  const jsoncContent = `{
+  // Main settings
+  "model": "claude-sonnet-4-20250514",
+  /* Multi-line
+     comment */
+  "provider": "anthropic",
+  "plugin": [
+    "existing-plugin.js" // inline comment
+  ]
+}`;
+  writeFileSync(configPath, jsoncContent);
+
+  const result = setupPlatform("opencode", configPath, LEASH_PATH);
+
+  assert.strictEqual(result.success, true);
+
+  const content = readFileSync(configPath, "utf-8");
+  assert.ok(content.includes("// Main settings"), "should preserve single-line comment");
+  assert.ok(content.includes("/* Multi-line"), "should preserve multi-line comment");
+  assert.ok(content.includes("existing-plugin.js"), "should preserve existing plugin");
+  assert.ok(content.includes(LEASH_PATH), "should add leash");
+
+  cleanup();
+});
+
+test("opencode: remove preserves JSONC comments", () => {
+  setup();
+  const configPath = join(TEST_DIR, "opencode-jsonc-remove.jsonc");
+  const jsoncContent = `{
+  // Settings comment
+  "model": "claude-sonnet-4-20250514",
+  "plugin": [
+    "other-plugin.js",
+    "${LEASH_PATH}"
+  ]
+}`;
+  writeFileSync(configPath, jsoncContent);
+
+  const result = removePlatform("opencode", configPath);
+
+  assert.strictEqual(result.success, true);
+
+  const content = readFileSync(configPath, "utf-8");
+  assert.ok(content.includes("// Settings comment"), "should preserve comment");
+  assert.ok(content.includes("other-plugin.js"), "should preserve other plugin");
+  assert.ok(!content.includes(LEASH_PATH), "should remove leash");
+
+  cleanup();
+});
+
 // Pi tests
 test("pi: setup on empty config", () => {
   setup();
@@ -169,13 +222,11 @@ test("claude-code: setup on empty config", () => {
   assert.strictEqual(result.success, true);
 
   const config = readTestConfig("claude-empty");
-  // SessionStart hook
   assert.strictEqual(config.hooks.SessionStart.length, 1);
   assert.strictEqual(
     config.hooks.SessionStart[0].hooks[0].command,
     `node ${LEASH_PATH}`
   );
-  // PreToolUse hook
   assert.strictEqual(config.hooks.PreToolUse.length, 1);
   assert.strictEqual(config.hooks.PreToolUse[0].matcher, "Bash|Write|Edit");
   assert.strictEqual(
@@ -204,9 +255,7 @@ test("claude-code: setup merges with existing hooks", () => {
 
   const config = readTestConfig("claude-merge");
   assert.deepStrictEqual(config.permissions, { allow: ["Bash"] });
-  // SessionStart hook added
   assert.strictEqual(config.hooks.SessionStart.length, 1);
-  // PreToolUse merged
   assert.strictEqual(config.hooks.PreToolUse.length, 2);
   assert.strictEqual(config.hooks.PreToolUse[0].matcher, ".*");
   assert.strictEqual(config.hooks.PreToolUse[1].matcher, "Bash|Write|Edit");
@@ -284,9 +333,7 @@ test("factory: setup on empty config", () => {
   assert.strictEqual(result.success, true);
 
   const config = readTestConfig("factory-empty");
-  // SessionStart hook
   assert.strictEqual(config.hooks.SessionStart.length, 1);
-  // PreToolUse hook
   assert.strictEqual(config.hooks.PreToolUse.length, 1);
   assert.strictEqual(config.hooks.PreToolUse[0].matcher, "Execute|Write|Edit");
 
@@ -340,13 +387,12 @@ test("readConfig returns empty object for non-existent file", () => {
   assert.deepStrictEqual(config, {});
 });
 
-test("readConfig returns empty object for invalid JSON", () => {
+test("readConfig throws on invalid JSON", () => {
   setup();
   const configPath = getConfigPath("invalid");
   writeFileSync(configPath, "not valid json");
 
-  const config = readConfig(configPath);
-  assert.deepStrictEqual(config, {});
+  assert.throws(() => readConfig(configPath), /Invalid JSON\/JSONC/);
 
   cleanup();
 });
