@@ -1,6 +1,57 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { dirname } from "path";
 import * as jsonc from "jsonc-parser";
+function createHookPlatform(opts) {
+  return {
+    name: opts.name,
+    configPath: opts.configPath,
+    distPath: opts.distPath,
+    setup: (config, leashPath) => {
+      config.hooks = config.hooks || {};
+      const hookCommand = { type: "command", command: `node ${leashPath}` };
+      const inSessionStart = config.hooks.SessionStart?.some(
+        (entry) => entry.hooks?.some((h) => h.command?.includes("leash"))
+      );
+      const inPreToolUse = config.hooks.PreToolUse?.some(
+        (entry) => entry.hooks?.some((h) => h.command?.includes("leash"))
+      );
+      if (inSessionStart && inPreToolUse) {
+        return { skipped: true };
+      }
+      if (!inSessionStart) {
+        config.hooks.SessionStart = config.hooks.SessionStart || [];
+        config.hooks.SessionStart.push({ hooks: [hookCommand] });
+      }
+      if (!inPreToolUse) {
+        config.hooks.PreToolUse = config.hooks.PreToolUse || [];
+        config.hooks.PreToolUse.push({
+          matcher: opts.preToolUseMatcher,
+          hooks: [hookCommand]
+        });
+      }
+      return { skipped: false };
+    },
+    remove: (config) => {
+      if (!config.hooks) return false;
+      let removed = false;
+      if (config.hooks.SessionStart) {
+        const before = config.hooks.SessionStart.length;
+        config.hooks.SessionStart = config.hooks.SessionStart.filter(
+          (entry) => !entry.hooks?.some((h) => h.command?.includes("leash"))
+        );
+        if (config.hooks.SessionStart.length < before) removed = true;
+      }
+      if (config.hooks.PreToolUse) {
+        const before = config.hooks.PreToolUse.length;
+        config.hooks.PreToolUse = config.hooks.PreToolUse.filter(
+          (entry) => !entry.hooks?.some((h) => h.command?.includes("leash"))
+        );
+        if (config.hooks.PreToolUse.length < before) removed = true;
+      }
+      return removed;
+    }
+  };
+}
 const PLATFORMS = {
   opencode: {
     name: "OpenCode",
@@ -8,13 +59,9 @@ const PLATFORMS = {
       ".config/opencode/opencode.jsonc",
       ".config/opencode/opencode.json"
     ],
-    distPath: "opencode/leash.js",
-    remove: (config) => {
-      if (!config.plugin) return false;
-      const before = config.plugin.length;
-      config.plugin = config.plugin.filter((p) => !p.includes("leash"));
-      return config.plugin.length < before;
-    }
+    distPath: "opencode/leash.js"
+    // opencode config is JSONC (supports comments). Generic readConfig/writeConfig use JSON.stringify
+    // which strips comments. setupOpenCode/removeOpenCode handle this via jsonc-parser instead.
   },
   pi: {
     name: "Pi",
@@ -35,104 +82,18 @@ const PLATFORMS = {
       return config.extensions.length < before;
     }
   },
-  "claude-code": {
+  "claude-code": createHookPlatform({
     name: "Claude Code",
     configPath: ".claude/settings.json",
     distPath: "claude-code/leash.js",
-    setup: (config, leashPath) => {
-      config.hooks = config.hooks || {};
-      const hookCommand = { type: "command", command: `node ${leashPath}` };
-      const inSessionStart = config.hooks.SessionStart?.some(
-        (entry) => entry.hooks?.some((h) => h.command?.includes("leash"))
-      );
-      const inPreToolUse = config.hooks.PreToolUse?.some(
-        (entry) => entry.hooks?.some((h) => h.command?.includes("leash"))
-      );
-      if (inSessionStart && inPreToolUse) {
-        return { skipped: true };
-      }
-      if (!inSessionStart) {
-        config.hooks.SessionStart = config.hooks.SessionStart || [];
-        config.hooks.SessionStart.push({ hooks: [hookCommand] });
-      }
-      if (!inPreToolUse) {
-        config.hooks.PreToolUse = config.hooks.PreToolUse || [];
-        config.hooks.PreToolUse.push({
-          matcher: "Bash|Write|Edit",
-          hooks: [hookCommand]
-        });
-      }
-      return { skipped: false };
-    },
-    remove: (config) => {
-      if (!config.hooks) return false;
-      let removed = false;
-      if (config.hooks.SessionStart) {
-        const before = config.hooks.SessionStart.length;
-        config.hooks.SessionStart = config.hooks.SessionStart.filter(
-          (entry) => !entry.hooks?.some((h) => h.command?.includes("leash"))
-        );
-        if (config.hooks.SessionStart.length < before) removed = true;
-      }
-      if (config.hooks.PreToolUse) {
-        const before = config.hooks.PreToolUse.length;
-        config.hooks.PreToolUse = config.hooks.PreToolUse.filter(
-          (entry) => !entry.hooks?.some((h) => h.command?.includes("leash"))
-        );
-        if (config.hooks.PreToolUse.length < before) removed = true;
-      }
-      return removed;
-    }
-  },
-  factory: {
+    preToolUseMatcher: "Bash|Write|Edit"
+  }),
+  factory: createHookPlatform({
     name: "Factory",
     configPath: ".factory/settings.json",
     distPath: "factory/leash.js",
-    setup: (config, leashPath) => {
-      config.hooks = config.hooks || {};
-      const hookCommand = { type: "command", command: `node ${leashPath}` };
-      const inSessionStart = config.hooks.SessionStart?.some(
-        (entry) => entry.hooks?.some((h) => h.command?.includes("leash"))
-      );
-      const inPreToolUse = config.hooks.PreToolUse?.some(
-        (entry) => entry.hooks?.some((h) => h.command?.includes("leash"))
-      );
-      if (inSessionStart && inPreToolUse) {
-        return { skipped: true };
-      }
-      if (!inSessionStart) {
-        config.hooks.SessionStart = config.hooks.SessionStart || [];
-        config.hooks.SessionStart.push({ hooks: [hookCommand] });
-      }
-      if (!inPreToolUse) {
-        config.hooks.PreToolUse = config.hooks.PreToolUse || [];
-        config.hooks.PreToolUse.push({
-          matcher: "Execute|Write|Edit",
-          hooks: [hookCommand]
-        });
-      }
-      return { skipped: false };
-    },
-    remove: (config) => {
-      if (!config.hooks) return false;
-      let removed = false;
-      if (config.hooks.SessionStart) {
-        const before = config.hooks.SessionStart.length;
-        config.hooks.SessionStart = config.hooks.SessionStart.filter(
-          (entry) => !entry.hooks?.some((h) => h.command?.includes("leash"))
-        );
-        if (config.hooks.SessionStart.length < before) removed = true;
-      }
-      if (config.hooks.PreToolUse) {
-        const before = config.hooks.PreToolUse.length;
-        config.hooks.PreToolUse = config.hooks.PreToolUse.filter(
-          (entry) => !entry.hooks?.some((h) => h.command?.includes("leash"))
-        );
-        if (config.hooks.PreToolUse.length < before) removed = true;
-      }
-      return removed;
-    }
-  }
+    preToolUseMatcher: "Execute|Write|Edit"
+  })
 };
 function readConfig(configPath) {
   if (!existsSync(configPath)) {
@@ -214,6 +175,9 @@ function setupPlatform(platformKey, configPath, leashPath) {
     return setupOpenCode(configPath, leashPath);
   }
   const config = readConfig(configPath);
+  if (!platform.setup) {
+    return { error: `Platform ${platformKey} has no setup handler` };
+  }
   const result = platform.setup(config, leashPath);
   if (result.skipped) {
     return { skipped: true, platform: platform.name };
@@ -233,6 +197,9 @@ function removePlatform(platformKey, configPath) {
     return { notFound: true, platform: platform.name };
   }
   const config = readConfig(configPath);
+  if (!platform.remove) {
+    return { error: `Platform ${platformKey} has no remove handler` };
+  }
   const removed = platform.remove(config);
   if (!removed) {
     return { notInstalled: true, platform: platform.name };

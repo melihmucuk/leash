@@ -29,6 +29,8 @@ Links:
 
 ## Quick Start
 
+**All platforms except Pi:**
+
 ```bash
 # Install leash globally
 npm install -g @melihmucuk/leash
@@ -43,12 +45,17 @@ leash --remove <platform>
 leash --update
 ```
 
-| Platform        | Command                     |
-| --------------- | --------------------------- |
-| OpenCode        | `leash --setup opencode`    |
-| Pi Coding Agent | `leash --setup pi`          |
-| Claude Code     | `leash --setup claude-code` |
-| Factory Droid   | `leash --setup factory`     |
+| Platform      | Command                     |
+| ------------- | --------------------------- |
+| OpenCode      | `leash --setup opencode`    |
+| Claude Code   | `leash --setup claude-code` |
+| Factory Droid | `leash --setup factory`     |
+
+**Pi Coding Agent:**
+
+```bash
+pi install npm:@melihmucuk/leash
+```
 
 Restart your agent. Done!
 
